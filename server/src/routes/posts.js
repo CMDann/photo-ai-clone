@@ -3,12 +3,15 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { dbGet, dbAll, dbRun } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const uploadsDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'server', 'uploads');
+const uploadsDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads');
 const postsDir = path.join(uploadsDir, 'posts');
 if (!fs.existsSync(postsDir)) fs.mkdirSync(postsDir, { recursive: true });
 const publicBase = process.env.PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 4000}`;

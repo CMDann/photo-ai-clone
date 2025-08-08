@@ -1,12 +1,18 @@
 import path from 'path';
 import fs from 'fs';
 import initSqlJs from 'sql.js';
+import { fileURLToPath } from 'url';
 
-const dbFile = process.env.DB_FILE || path.join(process.cwd(), 'server', 'data.sqlite');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Persist the SQLite file within this package folder by default
+const dbFile = process.env.DB_FILE || path.join(__dirname, '..', 'data.sqlite');
 const dataDir = path.dirname(dbFile);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const wasmPath = path.join(process.cwd(), 'server', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+// Ensure the wasm path points to this package's local node_modules
+const wasmPath = path.join(__dirname, '..', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
 const SQL = await initSqlJs({ locateFile: () => wasmPath });
 
 let db;

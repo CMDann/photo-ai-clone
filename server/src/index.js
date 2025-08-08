@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import authRouter from './routes/auth.js';
 import postsRouter from './routes/posts.js';
@@ -34,7 +35,11 @@ app.use('/api/profiles', profilesRouter);
 app.use('/api/follows', followsRouter);
 
 // Static uploads
-const uploadsDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'server', 'uploads');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Persist uploads within this package folder by default
+const uploadsDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsDir));
 
 const port = process.env.PORT || 4000;
