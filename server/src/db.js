@@ -1,15 +1,72 @@
-import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import initSqlJs from 'sql.js';
 
 const dbFile = process.env.DB_FILE || path.join(process.cwd(), 'server', 'data.sqlite');
 const dataDir = path.dirname(dbFile);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-export const db = new Database(dbFile);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const wasmPath = path.join(process.cwd(), 'server', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+const SQL = await initSqlJs({ locateFile: () => wasmPath });
 
+let db;
+if (fs.existsSync(dbFile)) {
+  const filebuffer = fs.readFileSync(dbFile);
+  db = new SQL.Database(filebuffer);
+} else {
+  db = new SQL.Database();
+}
+
+function persist() {
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(dbFile, buffer);
+}
+
+export function dbExec(sql) {
+  db.exec(sql);
+  persist();
+}
+
+export function dbRun(sql, params = []) {
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  stmt.step();
+  stmt.free();
+  persist();
+}
+
+export function dbGet(sql, params = []) {
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const row = stmt.step() ? stmt.getAsObject() : undefined;
+  stmt.free();
+  return row;
+}
+
+export function dbAll(sql, params = []) {
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const rows = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  return rows;
+}
+
+export function transaction(fn) {
+  try {
+    db.exec('BEGIN;');
+    const result = fn();
+    db.exec('COMMIT;');
+    persist();
+    return result;
+  } catch (e) {
+    try { db.exec('ROLLBACK;'); } catch {}
+    throw e;
+  }
+}
+
+// Schema
 db.exec(`
   create table if not exists users (
     id text primary key,
@@ -65,9 +122,4 @@ db.exec(`
   create index if not exists follows_follower_idx on follows(follower_id);
   create index if not exists follows_following_idx on follows(following_id);
 `);
-
-export function transaction(fn) {
-  const trx = db.transaction(fn);
-  return trx();
-}
-
+persist();

@@ -3,7 +3,7 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
-import { db } from '../db.js';
+import { dbGet, dbAll, dbRun } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -15,13 +15,13 @@ const publicBase = process.env.PUBLIC_BASE_URL || `http://localhost:${process.en
 
 router.get('/by-username/:username', async (req, res) => {
   const { username } = req.params;
-  const data = db.prepare('select id, username, full_name, bio, website, avatar_path from profiles where username = ?').get(username);
+  const data = dbGet('select id, username, full_name, bio, website, avatar_path from profiles where username = ?', [username]);
   if (!data) return res.status(404).json({ error: 'Not found' });
   let avatar_url = null;
   if (data.avatar_path) avatar_url = `${publicBase}/uploads/${data.avatar_path}`;
-  const posts = db.prepare('select count(*) as c from posts where author_id = ?').get(data.id).c;
-  const followers = db.prepare('select count(*) as c from follows where following_id = ?').get(data.id).c;
-  const following = db.prepare('select count(*) as c from follows where follower_id = ?').get(data.id).c;
+  const posts = dbGet('select count(*) as c from posts where author_id = ?', [data.id]).c;
+  const followers = dbGet('select count(*) as c from follows where following_id = ?', [data.id]).c;
+  const following = dbGet('select count(*) as c from follows where follower_id = ?', [data.id]).c;
   res.json({ profile: { ...data, avatar_url, counts: { posts, followers, following } } });
 });
 
@@ -38,7 +38,7 @@ router.patch('/', requireAuth, upload.single('avatar'), async (req, res) => {
     avatar_path = path.relative(uploadsDir, saved).split(path.sep).join('/');
   }
   if (username) {
-    const existing = db.prepare('select id from profiles where username = ? and id != ?').get(username, req.user.id);
+    const existing = dbGet('select id from profiles where username = ? and id != ?', [username, req.user.id]);
     if (existing) return res.status(409).json({ error: 'Username taken' });
   }
   const updateFields = [];
@@ -50,16 +50,16 @@ router.patch('/', requireAuth, upload.single('avatar'), async (req, res) => {
   if (username) { updateFields.push('username = ?'); params.push(username); }
   if (updateFields.length > 0) {
     params.push(req.user.id);
-    db.prepare(`update profiles set ${updateFields.join(', ')} where id = ?`).run(...params);
+    dbRun(`update profiles set ${updateFields.join(', ')} where id = ?`, params);
   }
-  const data = db.prepare('select id, username, full_name, bio, website, avatar_path from profiles where id = ?').get(req.user.id);
+  const data = dbGet('select id, username, full_name, bio, website, avatar_path from profiles where id = ?', [req.user.id]);
   const avatar_url = data.avatar_path ? `${publicBase}/uploads/${data.avatar_path}` : null;
   res.json({ profile: { ...data, avatar_url } });
 });
 
 router.get('/:id/posts', async (req, res) => {
   const { id } = req.params;
-  const data = db.prepare('select id, image_url, created_at, caption from posts where author_id = ? order by created_at desc').all(id);
+  const data = dbAll('select id, image_url, created_at, caption from posts where author_id = ? order by created_at desc', [id]);
   res.json({ posts: data || [] });
 });
 
