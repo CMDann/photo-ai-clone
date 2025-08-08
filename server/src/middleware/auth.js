@@ -1,52 +1,43 @@
-import { supabaseAnon } from '../supabase.js';
+import jwt from 'jsonwebtoken';
 
-function setAuthCookies(res, session) {
+const COOKIE_NAME = 'session';
+
+export function setSessionCookie(res, payload) {
   const secure = process.env.NODE_ENV === 'production';
   const domain = process.env.COOKIE_DOMAIN || undefined;
   const sameSite = secure ? 'none' : 'lax';
-  res.cookie('sb-access-token', session.access_token, {
-    httpOnly: true, secure, sameSite, domain, path: '/', maxAge: 60 * 60 * 24 * 7 * 1000,
-  });
-  res.cookie('sb-refresh-token', session.refresh_token, {
-    httpOnly: true, secure, sameSite, domain, path: '/', maxAge: 60 * 60 * 24 * 30 * 1000,
+  const ttlDays = Number(process.env.SESSION_TTL_DAYS || 7);
+  const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_secret', { expiresIn: `${ttlDays}d` });
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure,
+    sameSite,
+    domain,
+    path: '/',
+    maxAge: ttlDays * 24 * 60 * 60 * 1000,
   });
 }
 
-export async function attachUser(req, res, next) {
-  const access = req.cookies['sb-access-token'];
-  const refresh = req.cookies['sb-refresh-token'];
-  if (!access) {
+export function clearSessionCookie(res) {
+  res.clearCookie(COOKIE_NAME, { path: '/' });
+}
+
+export function attachUser(req, res, next) {
+  const token = req.cookies[COOKIE_NAME];
+  if (!token) {
     req.user = null;
     return next();
   }
-  let { data, error } = await supabaseAnon.auth.getUser(access);
-  if (error && refresh) {
-    const { data: refreshed, error: refreshError } = await supabaseAnon.auth.refreshSession({ refresh_token: refresh });
-    if (!refreshError && refreshed?.session) {
-      setAuthCookies(res, refreshed.session);
-      const { data: userData } = await supabaseAnon.auth.getUser(refreshed.session.access_token);
-      data = userData;
-      error = null;
-      req.accessToken = refreshed.session.access_token;
-    }
-  } else {
-    req.accessToken = access;
-  }
-
-  if (error) {
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+    req.user = { id: payload.sub, email: payload.email };
+  } catch {
     req.user = null;
-  } else {
-    req.user = data.user;
   }
   next();
 }
 
 export function requireAuth(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   next();
 }
-
-export { setAuthCookies };
-

@@ -14,11 +14,11 @@ Quick Start
    - Set `WEB_ORIGIN` to your frontend origin (e.g., http://localhost:5173).
    - Install deps: `npm install`
    - Run: `npm run dev`
-4) Web setup:
+4) Web setup (Next.js):
    - `cd web`
-   - Copy `.env.example` to `.env` and set `VITE_API_BASE` to the server URL (e.g., http://localhost:4000)
+   - Copy `.env.example` to `.env` and set `NEXT_PUBLIC_API_BASE` to the server URL (e.g., http://localhost:4000)
    - Install deps: `npm install`
-   - Run: `npm run dev`
+   - Run: `npm run dev` (http://localhost:3000)
 
 Core Features Implemented
 - Sign up, log in/out via Node server (Supabase Auth behind the scenes).
@@ -37,4 +37,3 @@ Next Steps (Optional Enhancements)
 - Add optimistic UI updates and infinite scroll.
 - Add image processing (resize) and rate limiting.
 - Add notifications and activity feed.
-

@@ -1,8 +1,8 @@
-Server (Express + Supabase)
+Server (Express + SQLite)
 
 Environment
 - Copy .env.example to .env and fill values.
-- Ensure buckets 'posts' and 'avatars' exist (apply supabase.sql at project root).
+- Key vars: JWT_SECRET, DB_FILE (SQLite path), UPLOAD_DIR, PUBLIC_BASE_URL, WEB_ORIGIN.
 
 Scripts
 - dev: node --watch src/index.js
@@ -28,6 +28,6 @@ API Overview
 - GET  /api/follows/status/:id
 
 Notes
-- Auth uses Supabase GoTrue; tokens stored in HttpOnly cookies.
-- All DB/storage ops use the service role key on the server.
-
+- Auth uses JWT in HttpOnly cookie named `session`.
+- SQLite is embedded; data file at DB_FILE.
+- Uploaded images are stored under UPLOAD_DIR and served at `/uploads/...`.

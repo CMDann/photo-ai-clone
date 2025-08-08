@@ -1,5 +1,5 @@
 import express from 'express';
-import { supabaseAdmin } from '../supabase.js';
+import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -7,35 +7,22 @@ const router = express.Router();
 router.post('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   if (id === req.user.id) return res.status(400).json({ error: 'Cannot follow self' });
-  const { error } = await supabaseAdmin
-    .from('follows')
-    .insert({ follower_id: req.user.id, following_id: id });
-  if (error && !String(error.message).includes('duplicate')) {
-    return res.status(500).json({ error: error.message });
-  }
+  try {
+    db.prepare('insert into follows (follower_id, following_id) values (?, ?)').run(req.user.id, id);
+  } catch {}
   res.json({ ok: true });
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { error } = await supabaseAdmin
-    .from('follows')
-    .delete()
-    .eq('follower_id', req.user.id)
-    .eq('following_id', id);
-  if (error) return res.status(500).json({ error: error.message });
+  db.prepare('delete from follows where follower_id = ? and following_id = ?').run(req.user.id, id);
   res.json({ ok: true });
 });
 
 router.get('/status/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { data } = await supabaseAdmin
-    .from('follows')
-    .select('follower_id')
-    .eq('follower_id', req.user.id)
-    .eq('following_id', id);
-  res.json({ following: (data || []).length > 0 });
+  const row = db.prepare('select 1 from follows where follower_id = ? and following_id = ?').get(req.user.id, id);
+  res.json({ following: !!row });
 });
 
 export default router;
-

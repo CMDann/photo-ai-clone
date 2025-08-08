@@ -1,13 +1,12 @@
-Web (Vite + React)
+Web (Next.js 14 App Router)
 
 Environment
-- Copy .env.example to .env and set VITE_API_BASE to your server URL (e.g., http://localhost:4000).
+- Copy `.env.example` to `.env` and set `NEXT_PUBLIC_API_BASE` to your server URL (e.g., http://localhost:4000).
 
 Scripts
-- dev: vite
-- build: vite build
-- preview: vite preview
+- dev: `npm run dev` (http://localhost:3000)
+- build: `npm run build`
+- start: `npm start`
 
-Pages
-- /login, /signup, / (feed), /new, /u/:username, /p/:id
-
+Routes
+- /login, /signup, / (feed), /new, /u/[username], /p/[id]

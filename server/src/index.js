@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import path from 'path';
 
 import authRouter from './routes/auth.js';
 import postsRouter from './routes/posts.js';
@@ -32,6 +33,9 @@ app.use('/api/posts', postsRouter);
 app.use('/api/profiles', profilesRouter);
 app.use('/api/follows', followsRouter);
 
+// Static uploads
+const uploadsDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'server', 'uploads');
+app.use('/uploads', express.static(uploadsDir));
+
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`Server listening on ${port}`));
-
