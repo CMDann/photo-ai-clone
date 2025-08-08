@@ -7,8 +7,18 @@ import { attachUser, setSessionCookie, clearSessionCookie } from '../middleware/
 const router = express.Router();
 
 router.post('/signup', async (req, res) => {
-  const { email, password, username, fullName } = req.body || {};
+  let { email, password, username, fullName } = req.body || {};
   if (!email || !password || !username) return res.status(400).json({ error: 'Missing fields' });
+
+  // Normalize input
+  email = String(email).trim().toLowerCase();
+  username = String(username).trim().toLowerCase();
+  if (fullName !== undefined && fullName !== null) fullName = String(fullName).trim();
+
+  // Basic validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
+  if (username.length < 3 || !/^[a-z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid username' });
+  if (String(password).length < 6) return res.status(400).json({ error: 'Password too short' });
 
   const existsEmail = dbGet('select id from users where email = ?', [email]);
   if (existsEmail) return res.status(409).json({ error: 'Email already in use' });
@@ -22,7 +32,13 @@ router.post('/signup', async (req, res) => {
       dbRun('insert into users (id, email, password_hash) values (?, ?, ?)', [id, email, password_hash]);
       dbRun('insert into profiles (id, username, full_name) values (?, ?, ?)', [id, username, fullName || null]);
     });
-  } catch (e) { return res.status(500).json({ error: 'Failed to create user' }); }
+  } catch (e) {
+    const msg = (e && e.message) || '';
+    if (msg.includes('UNIQUE') && msg.includes('users.email')) return res.status(409).json({ error: 'Email already in use' });
+    if (msg.includes('UNIQUE') && msg.includes('profiles.username')) return res.status(409).json({ error: 'Username taken' });
+    console.error('Signup error:', e);
+    return res.status(500).json({ error: 'Failed to create user' });
+  }
 
   res.json({ ok: true, user: { id, email, username, fullName } });
 });
