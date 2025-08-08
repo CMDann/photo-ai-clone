@@ -14,7 +14,7 @@ import { attachUser } from './middleware/auth.js';
 
 const app = express();
 
-const corsOrigin = process.env.WEB_ORIGIN || 'http://localhost:5173';
+const corsOrigin = process.env.WEB_ORIGIN || 'http://localhost:3000';
 
 app.use(morgan('dev'));
 app.use(

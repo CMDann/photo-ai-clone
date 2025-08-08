@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
+// Default to same-origin so cookies are first-party via Next.js rewrites.
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
 export async function api(path, opts = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -14,4 +15,3 @@ export async function api(path, opts = {}) {
   if (!res.ok) throw new Error(data?.error || data || `Request failed: ${res.status}`);
   return data;
 }
-
